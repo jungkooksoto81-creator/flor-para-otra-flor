@@ -4,118 +4,101 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Una flor para otra flor 🌸</title>
 
 <style>
-    html, body {
-        margin: 0;
-        padding: 0;
-        width: 100%;
-        min-height: 100%;
-        background: #000;
-    }
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: black;
+}
 
-    body {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        overflow: hidden;
-    }
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
 
-    canvas {
-        width: min(100vw, 700px);
-        height: min(100vw, 700px);
-        background: black;
-    }
+canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    background: black;
+}
 </style>
 </head>
 
 <body>
 
-<canvas id="flor" width="700" height="700"></canvas>
+<canvas id="canvas"></canvas>
 
 <script>
-const canvas = document.getElementById("flor");
+
+const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-const escala = 1;
-const centroX = 350;
-const centroY = 350;
+let W, H;
+let escala;
 
-// ----------------------------------------------------
-// COLORES
-// Equivalente a colorsys.hsv_to_rgb(0.125, 1, 1)
-// ----------------------------------------------------
+function ajustarCanvas() {
 
-function hsvToRgb(h, s, v) {
+    W = window.innerWidth;
+    H = window.innerHeight;
 
-    let r, g, b;
+    const dpr = window.devicePixelRatio || 1;
 
-    const i = Math.floor(h * 6);
-    const f = h * 6 - i;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
 
-    const p = v * (1 - s);
-    const q = v * (1 - f * s);
-    const t = v * (1 - (1 - f) * s);
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
 
-    switch (i % 6) {
-        case 0: r = v; g = t; b = p; break;
-        case 1: r = q; g = v; b = p; break;
-        case 2: r = p; g = v; b = t; break;
-        case 3: r = p; g = q; b = v; break;
-        case 4: r = t; g = p; b = v; break;
-        case 5: r = v; g = p; b = q; break;
-    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    return `rgb(${Math.round(r * 255)},
-                ${Math.round(g * 255)},
-                ${Math.round(b * 255)})`;
+    /*
+       La flor original mide aproximadamente
+       600 x 600 unidades.
+
+       La hacemos grande pero dejamos espacio
+       para el mensaje.
+    */
+
+    escala = Math.min(W, H) / 700;
 }
 
 
 // ----------------------------------------------------
-// ESTADO DEL "TURTLE"
+// ESTADO DE TURTLE
 // ----------------------------------------------------
 
-let turtle = {
-    x: 0,
-    y: 0,
-    heading: 0
-};
+let turtle;
 
 
-// ----------------------------------------------------
-// CONVERSIÓN DE COORDENADAS
-// Turtle usa Y positivo hacia arriba.
-// Canvas usa Y positivo hacia abajo.
-// ----------------------------------------------------
+// Reiniciar turtle
+function resetTurtle() {
 
-function canvasX(x) {
-    return centroX + x;
-}
-
-function canvasY(y) {
-    return centroY - y;
+    turtle = {
+        x: 0,
+        y: 0,
+        heading: 0
+    };
 }
 
 
 // ----------------------------------------------------
-// GOTO
+// COORDENADAS TURTLE -> PANTALLA
 // ----------------------------------------------------
 
-function gotoTurtle(x, y) {
-    turtle.x = x;
-    turtle.y = y;
+function sx(x) {
+    return W / 2 + x * escala;
 }
 
-
-// ----------------------------------------------------
-// SETHEADING
-// ----------------------------------------------------
-
-function setheading(grados) {
-    turtle.heading = grados;
+function sy(y) {
+    return H / 2 - y * escala;
 }
 
 
@@ -131,6 +114,10 @@ function lt(grados) {
     turtle.heading += grados;
 }
 
+function setheading(grados) {
+    turtle.heading = grados;
+}
+
 
 // ----------------------------------------------------
 // FORWARD
@@ -138,69 +125,94 @@ function lt(grados) {
 
 function fd(distancia) {
 
-    const rad = turtle.heading * Math.PI / 180;
+    const a =
+        turtle.heading * Math.PI / 180;
 
-    turtle.x += Math.cos(rad) * distancia;
-    turtle.y += Math.sin(rad) * distancia;
+    turtle.x +=
+        Math.cos(a) * distancia;
+
+    turtle.y +=
+        Math.sin(a) * distancia;
 }
 
 
 // ----------------------------------------------------
-// CIRCLE
+// CIRCLE REAL DE TURTLE
 //
-// Esta función intenta reproducir el comportamiento
-// de turtle.circle(radius, extent).
+// Esta es la parte importante.
+//
+// turtle.circle(radius, extent)
+// dibuja un arco alrededor de un centro
+// situado perpendicularmente al rumbo actual.
+//
+// Esto produce la forma real de los pétalos.
 // ----------------------------------------------------
 
 function circle(radius, extent) {
 
-    const pasos = Math.max(2, Math.ceil(Math.abs(extent) / 3));
+    if (radius === 0) return;
 
-    const incremento = extent / pasos;
+    const h =
+        turtle.heading * Math.PI / 180;
 
-    for (let i = 0; i < pasos; i++) {
+    // Centro del círculo.
+    const cx =
+        turtle.x - Math.sin(h) * radius;
 
-        const angulo1 =
-            turtle.heading * Math.PI / 180;
+    const cy =
+        turtle.y + Math.cos(h) * radius;
 
-        const x1 = turtle.x;
-        const y1 = turtle.y;
+    // Ángulo del punto inicial respecto al centro.
+    let angulo =
+        Math.atan2(
+            turtle.y - cy,
+            turtle.x - cx
+        );
 
-        // Movimiento aproximado sobre el arco.
-        turtle.heading += incremento;
+    const pasos =
+        Math.max(
+            3,
+            Math.ceil(Math.abs(extent) / 2)
+        );
 
-        const angulo2 =
-            turtle.heading * Math.PI / 180;
+    const incremento =
+        extent * Math.PI / 180 / pasos;
 
-        const distancia =
-            Math.abs(radius) *
-            Math.abs(incremento) *
-            Math.PI / 180;
+    for (let i = 1; i <= pasos; i++) {
 
-        turtle.x += Math.cos(angulo2) * distancia;
-        turtle.y += Math.sin(angulo2) * distancia;
+        const a =
+            angulo + incremento * i;
+
+        turtle.x =
+            cx + radius * Math.cos(a);
+
+        turtle.y =
+            cy + radius * Math.sin(a);
 
         ctx.lineTo(
-            canvasX(turtle.x),
-            canvasY(turtle.y)
+            sx(turtle.x),
+            sy(turtle.y)
         );
     }
+
+    // Actualizar rumbo de turtle.
+    turtle.heading += extent;
 }
 
 
 // ----------------------------------------------------
-// DIBUJAR LOS PÉTALOS
+// PÉTALOS
 //
-// Basado directamente en:
+// EXACTAMENTE la estructura de tu código:
 //
-// goto(0,-40)
+// goto(0, -40)
 //
 // for i in range(16):
 //     for j in range(18):
 //         rt(90)
-//         circle(...,90)
+//         circle(..., 90)
 //         lt(90)
-//         circle(...,90)
+//         circle(..., 90)
 //         rt(180)
 //
 //     circle(40,24)
@@ -208,56 +220,61 @@ function circle(radius, extent) {
 
 function dibujarPetalos() {
 
-    gotoTurtle(0, -40);
+    resetTurtle();
 
-    ctx.lineWidth = 1;
+    turtle.x = 0;
+    turtle.y = -40;
+
+    ctx.lineWidth =
+        Math.max(1, 1.2 * escala);
+
+    ctx.strokeStyle =
+        "rgb(255,191,64)";
 
     for (let i = 0; i < 16; i++) {
 
         for (let j = 0; j < 18; j++) {
 
-            const c =
-                hsvToRgb(0.125, 1, 1);
-
-            ctx.strokeStyle = c;
-
             ctx.beginPath();
 
             ctx.moveTo(
-                canvasX(turtle.x),
-                canvasY(turtle.y)
+                sx(turtle.x),
+                sy(turtle.y)
             );
 
+            // rt(90)
             rt(90);
 
+            // circle(100-j*4,90)
             circle(
                 100 - j * 4,
                 90
             );
 
+            // lt(90)
             lt(90);
 
+            // circle(100-j*4,90)
             circle(
                 100 - j * 4,
                 90
             );
 
+            // rt(180)
             rt(180);
 
             ctx.stroke();
         }
 
+        // circle(40,24)
         ctx.beginPath();
 
         ctx.moveTo(
-            canvasX(turtle.x),
-            canvasY(turtle.y)
+            sx(turtle.x),
+            sy(turtle.y)
         );
 
         circle(40, 24);
-
-        ctx.strokeStyle =
-            hsvToRgb(0.125, 1, 1);
 
         ctx.stroke();
     }
@@ -265,21 +282,17 @@ function dibujarPetalos() {
 
 
 // ----------------------------------------------------
-// CENTRO DE LA FLOR
+// CENTRO
 //
-// Basado directamente en:
-//
-// phi = 137.508°
-//
-// r = 2 * sqrt(i)
-// theta = i * phi
-// stamp()
+// Exactamente la matemática de tu código.
 // ----------------------------------------------------
 
 function dibujarCentro() {
 
     const phi =
         137.508 * Math.PI / 180;
+
+    ctx.fillStyle = "brown";
 
     for (let i = 0; i < 200; i++) {
 
@@ -298,24 +311,26 @@ function dibujarCentro() {
         ctx.save();
 
         ctx.translate(
-            canvasX(x),
-            canvasY(y)
+            sx(x),
+            sy(y)
         );
 
         ctx.rotate(
-            -(i * 137.508) * Math.PI / 180
+            -(i * 137.508) *
+            Math.PI / 180
         );
 
-        // Representación del stamp de Turtle
-        ctx.fillStyle = "brown";
+        /*
+           Representación del stamp de Turtle.
+        */
 
         ctx.beginPath();
 
         ctx.ellipse(
             0,
             0,
-            4,
-            6,
+            3.2 * escala,
+            4.5 * escala,
             0,
             0,
             Math.PI * 2
@@ -330,69 +345,84 @@ function dibujarCentro() {
 
 // ----------------------------------------------------
 // TALLO
+//
+// Basado directamente en:
+//
+// goto(0,-40)
+// setheading(270)
+// fd(250)
+// lt(90)
+// fd(10)
+// lt(90)
+// fd(250)
+// lt(90)
+// fd(10)
 // ----------------------------------------------------
 
 function dibujarTallo() {
 
-    gotoTurtle(0, -40);
+    resetTurtle();
+
+    turtle.x = 0;
+    turtle.y = -40;
 
     setheading(270);
 
     const puntos = [];
 
-    puntos.push([
-        turtle.x,
-        turtle.y
-    ]);
+    puntos.push({
+        x: turtle.x,
+        y: turtle.y
+    });
 
     fd(250);
 
-    puntos.push([
-        turtle.x,
-        turtle.y
-    ]);
+    puntos.push({
+        x: turtle.x,
+        y: turtle.y
+    });
 
     lt(90);
 
     fd(10);
 
-    puntos.push([
-        turtle.x,
-        turtle.y
-    ]);
+    puntos.push({
+        x: turtle.x,
+        y: turtle.y
+    });
 
     lt(90);
 
     fd(250);
 
-    puntos.push([
-        turtle.x,
-        turtle.y
-    ]);
+    puntos.push({
+        x: turtle.x,
+        y: turtle.y
+    });
 
     lt(90);
 
     fd(10);
 
-    puntos.push([
-        turtle.x,
-        turtle.y
-    ]);
+    puntos.push({
+        x: turtle.x,
+        y: turtle.y
+    });
 
     ctx.fillStyle = "green";
 
     ctx.beginPath();
 
     ctx.moveTo(
-        canvasX(puntos[0][0]),
-        canvasY(puntos[0][1])
+        sx(puntos[0].x),
+        sy(puntos[0].y)
     );
 
     for (let i = 1; i < puntos.length; i++) {
 
         ctx.lineTo(
-            canvasX(puntos[i][0]),
-            canvasY(puntos[i][1])
+            sx(puntos[i].x),
+            sy(puntos[i].y)
         );
     }
 
@@ -403,73 +433,88 @@ function dibujarTallo() {
 
 
 // ----------------------------------------------------
-// CUADRO Y MENSAJE
+// MENSAJE
 // ----------------------------------------------------
 
-function dibujarCuadroTexto() {
+function dibujarMensaje() {
 
-    ctx.fillStyle = "black";
+    ctx.save();
+
+    ctx.textAlign = "center";
+
+    // Fondo del mensaje
+    ctx.fillStyle = "rgba(0,0,0,0.85)";
 
     ctx.fillRect(
-        centroX - 250,
-        centroY - 220,
-        300,
-        50
+        W / 2 - 230 * escala,
+        25,
+        460 * escala,
+        85 * escala
     );
 
     ctx.fillStyle = "white";
 
     ctx.font =
-        "bold 16px Arial";
-
-    ctx.textAlign = "left";
+        `bold ${Math.max(18, 24 * escala)}px Arial`;
 
     ctx.fillText(
         "Una flor para otra flor",
-        centroX - 180,
-        centroY - 195
+        W / 2,
+        58 * escala
     );
 
     ctx.fillStyle = "#FFD166";
 
+    ctx.font =
+        `bold ${Math.max(16, 21 * escala)}px Arial`;
+
     ctx.fillText(
-        "Feliz 21 de septiembre",
-        centroX - 180,
-        centroY - 173
+        "Feliz 21 de septiembre 🌸",
+        W / 2,
+        92 * escala
     );
+
+    ctx.restore();
 }
 
 
 // ----------------------------------------------------
-// DIBUJO
+// DIBUJAR TODO
 // ----------------------------------------------------
 
 function dibujarTodo() {
+
+    ajustarCanvas();
 
     ctx.fillStyle = "black";
 
     ctx.fillRect(
         0,
         0,
-        canvas.width,
-        canvas.height
+        W,
+        H
     );
-
-    dibujarCuadroTexto();
 
     dibujarTallo();
 
+    dibujarPetalos();
+
     dibujarCentro();
 
-    dibujarPetalos();
+    dibujarMensaje();
 }
 
 
 // ----------------------------------------------------
-// COMENZAR
+// INICIAR
 // ----------------------------------------------------
 
 dibujarTodo();
+
+window.addEventListener(
+    "resize",
+    dibujarTodo
+);
 
 </script>
 
