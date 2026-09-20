@@ -1,0 +1,168 @@
+```html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Una flor para otra flor 🌸</title>
+
+<style>
+    body {
+        margin: 0;
+        background: black;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        overflow: hidden;
+        font-family: Arial, sans-serif;
+    }
+
+    canvas {
+        max-width: 95vw;
+        max-height: 95vh;
+    }
+</style>
+</head>
+
+<body>
+
+<canvas id="flor" width="700" height="700"></canvas>
+
+<script>
+const canvas = document.getElementById("flor");
+const ctx = canvas.getContext("2d");
+
+let progreso = 0;
+
+function limpiar() {
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+// Dibuja el tallo
+function dibujarTallo() {
+    ctx.strokeStyle = "#228B22";
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.moveTo(350, 330);
+    ctx.lineTo(350, 650);
+    ctx.stroke();
+}
+
+// Dibuja los pétalos
+function dibujarPetalos() {
+
+    const cantidad = Math.floor(16 * 18 * progreso);
+
+    for (let i = 0; i < cantidad; i++) {
+
+        const petalo = i % 18;
+        const vuelta = Math.floor(i / 18);
+
+        const anguloBase = vuelta * Math.PI * 2 / 16;
+        const radio = 100 - petalo * 4;
+
+        ctx.strokeStyle = "rgb(255, 191, 64)";
+        ctx.lineWidth = 2;
+
+        ctx.beginPath();
+
+        for (let a = 0; a <= Math.PI * 2; a += 0.08) {
+
+            const r = radio * (0.65 + 0.35 * Math.abs(Math.sin(a)));
+
+            const x =
+                350 +
+                r * Math.cos(a + anguloBase);
+
+            const y =
+                300 +
+                r * Math.sin(a + anguloBase);
+
+            if (a === 0)
+                ctx.moveTo(x, y);
+            else
+                ctx.lineTo(x, y);
+        }
+
+        ctx.stroke();
+    }
+}
+
+// Centro de la flor
+function dibujarCentro() {
+
+    const cantidad = Math.floor(200 * progreso);
+
+    ctx.fillStyle = "#8B4513";
+
+    const phi = 137.508 * Math.PI / 180;
+
+    for (let i = 0; i < cantidad; i++) {
+
+        const r = 2 * Math.sqrt(i);
+        const theta = i * phi;
+
+        const x = 350 + r * Math.cos(theta);
+        const y = 300 + r * Math.sin(theta);
+
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+// Mensaje
+function dibujarMensaje() {
+
+    if (progreso < 1) return;
+
+    ctx.textAlign = "center";
+
+    ctx.fillStyle = "white";
+    ctx.font = "bold 28px Arial";
+
+    ctx.fillText(
+        "Una flor para otra flor",
+        350,
+        80
+    );
+
+    ctx.font = "bold 23px Arial";
+
+    ctx.fillStyle = "#FFD166";
+
+    ctx.fillText(
+        "Feliz 21 de septiembre 🌸",
+        350,
+        115
+    );
+}
+
+// Animación
+function animar() {
+
+    progreso += 0.006;
+
+    if (progreso > 1)
+        progreso = 1;
+
+    limpiar();
+
+    dibujarTallo();
+    dibujarPetalos();
+    dibujarCentro();
+    dibujarMensaje();
+
+    if (progreso < 1) {
+        requestAnimationFrame(animar);
+    }
+}
+
+animar();
+</script>
+
+</body>
+</html>
+```
