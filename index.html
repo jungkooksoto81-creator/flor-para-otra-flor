@@ -7,20 +7,26 @@
 <title>Una flor para otra flor 🌸</title>
 
 <style>
-    body {
+    html, body {
         margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
         background: black;
+        overflow: hidden;
+    }
+
+    body {
         display: flex;
         justify-content: center;
         align-items: center;
-        min-height: 100vh;
-        overflow: hidden;
-        font-family: Arial, sans-serif;
     }
 
     canvas {
-        max-width: 95vw;
-        max-height: 95vh;
+        display: block;
+        max-width: 100vw;
+        max-height: 100vh;
+        background: black;
     }
 </style>
 </head>
@@ -30,137 +36,308 @@
 <canvas id="flor" width="700" height="700"></canvas>
 
 <script>
+
 const canvas = document.getElementById("flor");
 const ctx = canvas.getContext("2d");
 
-let progreso = 0;
+const W = 700;
+const H = 700;
 
-function limpiar() {
-    ctx.fillStyle = "black";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-}
+ctx.translate(W / 2, H / 2);
 
-// Dibuja el tallo
-function dibujarTallo() {
-    ctx.strokeStyle = "#228B22";
-    ctx.lineWidth = 10;
-    ctx.beginPath();
-    ctx.moveTo(350, 330);
-    ctx.lineTo(350, 650);
-    ctx.stroke();
-}
+// --------------------------------------------------
+// FUNCIONES AUXILIARES
+// --------------------------------------------------
 
-// Dibuja los pétalos
-function dibujarPetalos() {
+function hsvToRgb(h, s, v) {
 
-    const cantidad = Math.floor(16 * 18 * progreso);
+    let r, g, b;
 
-    for (let i = 0; i < cantidad; i++) {
+    const i = Math.floor(h * 6);
+    const f = h * 6 - i;
 
-        const petalo = i % 18;
-        const vuelta = Math.floor(i / 18);
+    const p = v * (1 - s);
+    const q = v * (1 - f * s);
+    const t = v * (1 - (1 - f) * s);
 
-        const anguloBase = vuelta * Math.PI * 2 / 16;
-        const radio = 100 - petalo * 4;
+    switch (i % 6) {
 
-        ctx.strokeStyle = "rgb(255, 191, 64)";
-        ctx.lineWidth = 2;
+        case 0:
+            r = v;
+            g = t;
+            b = p;
+            break;
 
-        ctx.beginPath();
+        case 1:
+            r = q;
+            g = v;
+            b = p;
+            break;
 
-        for (let a = 0; a <= Math.PI * 2; a += 0.08) {
+        case 2:
+            r = p;
+            g = v;
+            b = t;
+            break;
 
-            const r = radio * (0.65 + 0.35 * Math.abs(Math.sin(a)));
+        case 3:
+            r = p;
+            g = q;
+            b = v;
+            break;
 
-            const x =
-                350 +
-                r * Math.cos(a + anguloBase);
+        case 4:
+            r = t;
+            g = p;
+            b = v;
+            break;
 
-            const y =
-                300 +
-                r * Math.sin(a + anguloBase);
-
-            if (a === 0)
-                ctx.moveTo(x, y);
-            else
-                ctx.lineTo(x, y);
-        }
-
-        ctx.stroke();
+        case 5:
+            r = v;
+            g = p;
+            b = q;
+            break;
     }
+
+    return `rgb(${r * 255}, ${g * 255}, ${b * 255})`;
 }
 
-// Centro de la flor
-function dibujarCentro() {
 
-    const cantidad = Math.floor(200 * progreso);
+// --------------------------------------------------
+// DIBUJAR TALLO
+// --------------------------------------------------
 
-    ctx.fillStyle = "#8B4513";
+function dibujarTallo() {
+
+    ctx.save();
+
+    ctx.translate(0, -40);
+
+    ctx.fillStyle = "green";
+
+    ctx.beginPath();
+
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, 250);
+    ctx.lineTo(10, 250);
+    ctx.lineTo(10, 0);
+    ctx.closePath();
+
+    ctx.fill();
+
+    ctx.restore();
+}
+
+
+// --------------------------------------------------
+// DIBUJAR CENTRO
+// --------------------------------------------------
+
+function dibujarCentro(cantidad) {
 
     const phi = 137.508 * Math.PI / 180;
+
+    ctx.fillStyle = "brown";
 
     for (let i = 0; i < cantidad; i++) {
 
         const r = 2 * Math.sqrt(i);
+
         const theta = i * phi;
 
-        const x = 350 + r * Math.cos(theta);
-        const y = 300 + r * Math.sin(theta);
+        const x = r * Math.cos(theta);
+        const y = r * Math.sin(theta);
+
+        ctx.save();
+
+        ctx.translate(x, y);
+
+        ctx.rotate(i * 137.508 * Math.PI / 180);
 
         ctx.beginPath();
-        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.arc(0, 0, 3, 0, Math.PI * 2);
         ctx.fill();
+
+        ctx.restore();
     }
 }
 
-// Mensaje
+
+// --------------------------------------------------
+// DIBUJAR UN PETALO
+// --------------------------------------------------
+
+function dibujarPetalo(radio, angulo) {
+
+    ctx.save();
+
+    ctx.rotate(angulo);
+
+    ctx.beginPath();
+
+    /*
+       Esta parte reproduce la lógica de:
+
+       rt(90)
+       circle(...)
+       lt(90)
+       circle(...)
+       rt(180)
+    */
+
+    ctx.moveTo(0, 0);
+
+    ctx.arc(
+        0,
+        0,
+        radio,
+        -Math.PI / 2,
+        Math.PI / 2,
+        false
+    );
+
+    ctx.arc(
+        0,
+        0,
+        radio,
+        Math.PI / 2,
+        3 * Math.PI / 2,
+        false
+    );
+
+    ctx.strokeStyle = hsvToRgb(0.125, 1, 1);
+    ctx.lineWidth = 1;
+
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+
+// --------------------------------------------------
+// DIBUJAR PETALOS
+// --------------------------------------------------
+
+function dibujarPetalos(cantidad) {
+
+    let contador = 0;
+
+    for (let i = 0; i < 16; i++) {
+
+        const angulo = i * (2 * Math.PI / 16);
+
+        for (let j = 0; j < 18; j++) {
+
+            if (contador >= cantidad)
+                return;
+
+            const radio = 100 - j * 4;
+
+            dibujarPetalo(radio, angulo);
+
+            contador++;
+        }
+    }
+}
+
+
+// --------------------------------------------------
+// MENSAJE
+// --------------------------------------------------
+
 function dibujarMensaje() {
 
-    if (progreso < 1) return;
+    ctx.save();
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+    ctx.fillStyle = "white";
 
     ctx.textAlign = "center";
 
-    ctx.fillStyle = "white";
-    ctx.font = "bold 28px Arial";
+    ctx.font = "bold 25px Arial";
 
     ctx.fillText(
         "Una flor para otra flor",
-        350,
-        80
+        W / 2,
+        45
     );
-
-    ctx.font = "bold 23px Arial";
 
     ctx.fillStyle = "#FFD166";
 
+    ctx.font = "bold 21px Arial";
+
     ctx.fillText(
         "Feliz 21 de septiembre 🌸",
-        350,
-        115
+        W / 2,
+        75
     );
+
+    ctx.restore();
 }
 
-// Animación
+
+// --------------------------------------------------
+// ANIMACIÓN
+// --------------------------------------------------
+
+let petalos = 0;
+let centros = 0;
+
 function animar() {
 
-    progreso += 0.006;
+    ctx.save();
 
-    if (progreso > 1)
-        progreso = 1;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-    limpiar();
+    ctx.fillStyle = "black";
+
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.restore();
+
+    // Volver al centro
+    ctx.save();
+
+    ctx.translate(W / 2, H / 2);
 
     dibujarTallo();
-    dibujarPetalos();
-    dibujarCentro();
+
+    dibujarPetalos(petalos);
+
+    dibujarCentro(centros);
+
+    ctx.restore();
+
     dibujarMensaje();
 
-    if (progreso < 1) {
+    if (petalos < 288) {
+
+        petalos += 2;
+
+    } else if (centros < 200) {
+
+        centros += 2;
+
+    }
+
+    if (petalos < 288 || centros < 200) {
+
         requestAnimationFrame(animar);
+
+    } else {
+
+        dibujarMensaje();
     }
 }
 
+
+// --------------------------------------------------
+// COMENZAR
+// --------------------------------------------------
+
 animar();
+
 </script>
 
 </body>
